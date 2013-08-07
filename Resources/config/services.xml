@@ -15,16 +15,16 @@
     </parameters>
 
     <services>
-        <service id="bcc_resque.resque" class="%bcc_resque.resque.class%">
+        <service id="bcc_resque.resque" class="%bcc_resque.class%">
             <argument type="collection">
                 <argument key="kernel.root_dir">%bcc_resque.kernel.root_dir%</argument>
                 <argument key="kernel.debug">%kernel.debug%</argument>
                 <argument key="kernel.environment">%kernel.environment%</argument>
             </argument>
             <call method="setRedisConfiguration">
-                <argument>%bcc_resque.resque.redis.host%</argument>
-                <argument>%bcc_resque.resque.redis.port%</argument>
-                <argument>%bcc_resque.resque.redis.database%</argument>
+                <argument>%bcc_resque.redis.host%</argument>
+                <argument>%bcc_resque.redis.port%</argument>
+                <argument>%bcc_resque.redis.database%</argument>
             </call>
             <call method="pruneDeadWorkers" />
         </service>
