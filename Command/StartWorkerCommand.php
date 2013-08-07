@@ -17,6 +17,8 @@ class StartWorkerCommand extends ContainerAwareCommand
             ->setName('bcc:resque:worker-start')
             ->setDescription('Start a bcc resque worker')
             ->addArgument('queues', InputArgument::REQUIRED, 'Queue names (separate using comma)')
+            ->addOption('count', 'c', InputOption::VALUE_REQUIRED, 'How many workers to fork', 1)
+            ->addOption('interval', 'i', InputOption::VALUE_REQUIRED, 'How often to check for new jobs across the queues', 5)
             ->addOption('foreground', 'f', InputOption::VALUE_NONE, 'Should the worker run in foreground')
             ->addOption('memory-limit', 'm', InputOption::VALUE_REQUIRED, 'Force cli memory_limit (expressed in Mbytes)')
         ;
@@ -25,9 +27,11 @@ class StartWorkerCommand extends ContainerAwareCommand
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $env = array(
-            'APP_INCLUDE' => $this->getContainer()->getParameter('bcc_resque.vendor_dir').'/autoload.php',
+            'APP_INCLUDE' => $this->getContainer()->getParameter('kernel.root_dir').'/bootstrap.php.cache',
             'QUEUE'       => $input->getArgument('queues'),
             'VERBOSE'     => 1,
+            'COUNT'       => $input->getOption('count'),
+            'INTERVAL'    => $input->getOption('interval'),
         );
         $prefix = $this->getContainer()->getParameter('bcc_resque.prefix');
         if (!empty($prefix)) {
@@ -65,6 +69,19 @@ class StartWorkerCommand extends ContainerAwareCommand
                 '%logs_dir%' => $this->getContainer()->getParameter('kernel.logs_dir'),
             ));
         }
+		
+		
+		// In windows: When you pass an environment to CMD it replaces the old environment
+		// That means we create a lot of problems with respect to user accounts and missing vars
+		// this is a workaround where we add the vars to the existing environment. 
+		if (defined('PHP_WINDOWS_VERSION_BUILD'))
+		{
+			foreach($env as $key => $value)
+			{
+				putenv($key."=". $value);
+			}
+			$env = null;
+		}
 
         $process = new Process($workerCommand, null, $env, null, null);
 

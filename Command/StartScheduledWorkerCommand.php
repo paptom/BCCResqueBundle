@@ -32,9 +32,9 @@ class StartScheduledWorkerCommand extends ContainerAwareCommand
         }
 
         $env = array(
-            'APP_INCLUDE' => $this->getContainer()->getParameter('bcc_resque.vendor_dir').'/autoload.php',
+            'APP_INCLUDE' => $this->getContainer()->getParameter('kernel.root_dir').'/bootstrap.php.cache',
             'VVERBOSE'    => 1,
-            'RESQUE_PHP' => $this->getContainer()->getParameter('bcc_resque.resque.vendor_dir').'/chrisboulton/php-resque/lib/Resque.php',
+            'RESQUE_PHP' => $this->getContainer()->getParameter('bcc_resque.vendor_dir').'/chrisboulton/php-resque/lib/Resque.php',
         );
 
         $prefix = $this->getContainer()->getParameter('bcc_resque.prefix');
@@ -52,7 +52,7 @@ class StartScheduledWorkerCommand extends ContainerAwareCommand
             $env['REDIS_BACKEND_DB'] = $redisDatabase;
         }
 
-        $workerCommand = 'php '.$this->getContainer()->getParameter('bcc_resque.resque.vendor_dir').'/chrisboulton/php-resque-scheduler/resque-scheduler.php';
+        $workerCommand = 'php '.$this->getContainer()->getParameter('bcc_resque.vendor_dir').'/chrisboulton/php-resque-scheduler/resque-scheduler.php';
 
         if (!$input->getOption('foreground')) {
             $logFile = $this->getContainer()->getParameter(
@@ -61,7 +61,20 @@ class StartScheduledWorkerCommand extends ContainerAwareCommand
             $workerCommand = 'nohup ' . $workerCommand . ' > ' . $logFile .' 2>&1 & echo $!';
         }
 
-        $process = new Process($workerCommand, null, $env);
+		// In windows: When you pass an environment to CMD it replaces the old environment
+		// That means we create a lot of problems with respect to user accounts and missing vars
+		// this is a workaround where we add the vars to the existing environment. 
+		if (defined('PHP_WINDOWS_VERSION_BUILD'))
+		{
+			foreach($env as $key => $value)
+			{
+				putenv($key."=". $value);
+			}
+			$env = null;
+		}
+
+
+        $process = new Process($workerCommand, null, $env, null, null);
 
         $output->writeln(\sprintf('Starting worker <info>%s</info>', $process->getCommandLine()));
 
